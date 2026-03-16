@@ -69,7 +69,7 @@ The easiest way to run Hako is via Docker. The application is configured to auto
 
 1. Clone the repository:
    ```bash
-   git clone [https://github.com/yourusername/hako-storage.git](https://github.com/yourusername/hako-storage.git)
+   git clone https://github.com/cannon03/hako.git
    cd hako-storage 
    
    ```
@@ -82,9 +82,6 @@ The easiest way to run Hako is via Docker. The application is configured to auto
 The API will instantly be available at http://localhost:8000. Persistent storage (SQLite DB and the CAS objects) is safely mounted to the local ./data directory.
 
 ---
-
-
-### Part 3: API Reference & Testing
 
 
 ## 📖 API Reference
