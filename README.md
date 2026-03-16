@@ -5,7 +5,7 @@
 ![Docker](https://img.shields.io/badge/Docker-Enabled-2496ED.svg)
 ![SQLite](https://img.shields.io/badge/SQLite-Asyncio-003B57.svg)
 
-**Hako** is a high-performance, single-node object storage server built with Python and FastAPI. Designed as a minimal S3-clone, it provides efficient file uploads, downloads, and bucket management. 
+**Hako** is a lightweight, single-node object storage server built with Python and FastAPI.
 
 At its core, Hako utilizes a **Content-Addressed Storage (CAS)** architecture, async disk I/O, and atomic writes to guarantee data integrity, aggressive deduplication, and safe concurrent workloads without exhausting system memory.
 
