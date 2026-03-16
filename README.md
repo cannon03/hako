@@ -1,4 +1,4 @@
-# Hako 📦 | High-Performance Object Storage Server
+# Hako 📦 | Lightweight Async Object Storage Server
 
 ![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-009688.svg)
