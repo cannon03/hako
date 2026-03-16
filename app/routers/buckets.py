@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
+from loguru import logger
 
 from app.database import get_db
 from app.models import Bucket, Key
@@ -24,7 +25,7 @@ async def create_bucket(bucket: str, db: AsyncSession = Depends(get_db)):
             detail="Invalid bucket name. Use 3-63 lowercase letters, numbers, or hyphens.",
         )
 
-    print(f"Attempting to create bucket: {bucket}")
+    logger.info(f"Attempting to create bucket: {bucket}")
 
     new_bucket = Bucket(name=bucket)
     db.add(new_bucket)
@@ -32,12 +33,12 @@ async def create_bucket(bucket: str, db: AsyncSession = Depends(get_db)):
     try:
         await db.commit()
         await db.refresh(new_bucket)
-        print(f"Bucket created successfully: {new_bucket.name}")
+        logger.info(f"Bucket created successfully: {new_bucket.name}")
         return new_bucket
 
     except IntegrityError:
         await db.rollback()
-        print(f"Bucket creation failed: {bucket} already exists.")
+        logger.warning(f"Bucket creation failed: {bucket} already exists.")
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail="Bucket already exists."
         )
@@ -45,7 +46,7 @@ async def create_bucket(bucket: str, db: AsyncSession = Depends(get_db)):
 
 @router.get("", response_model=list[BucketResponse])
 async def list_buckets(db: AsyncSession = Depends(get_db)):
-    print("Listing all buckets")
+    logger.info("Listing all buckets")
     result = await db.execute(select(Bucket))
     buckets = result.scalars().all()
     return buckets
@@ -54,7 +55,7 @@ async def list_buckets(db: AsyncSession = Depends(get_db)):
 @router.delete("/{bucket}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_bucket(bucket: str, db: AsyncSession = Depends(get_db)):
 
-    print(f"Attempting to delete bucket: {bucket}")
+    logger.info(f"Attempting to delete bucket: {bucket}")
 
     result = await db.execute(select(Bucket).where(Bucket.name == bucket))
     target_bucket = result.scalar_one_or_none()
@@ -67,12 +68,12 @@ async def delete_bucket(bucket: str, db: AsyncSession = Depends(get_db)):
     keys_result = await db.execute(select(Key).where(Key.bucket == bucket).limit(1))
 
     if keys_result.scalar_one_or_none():
-        print(f"Failed: Cannot delete bucket '{bucket}' because it contains keys.")
+        logger.warning(f"Failed: Cannot delete bucket '{bucket}' because it contains keys.")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Bucket is not empty."
         )
 
     await db.delete(target_bucket)
     await db.commit()
-    print(f"Bucket '{bucket}' deleted successfully.")
+    logger.info(f"Bucket '{bucket}' deleted successfully.")
     return None

@@ -9,6 +9,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
+from loguru import logger
 
 from app.const import OBJECTS_DIR, TMP_DIR
 from app.database import get_db
@@ -95,14 +96,14 @@ async def download_object(
     bucket: str, key: str, request: Request, db: AsyncSession = Depends(get_db)
 ):
 
-    print(f"Download request for '{bucket}/{key}")
+    logger.info(f"Download request for '{bucket}/{key}")
 
     statement = select(Key).where(Key.bucket == bucket, Key.key == key)
     result = await db.execute(statement)
     key_record = result.scalar_one_or_none()
 
     if not key_record:
-        print(f"Failed : Key '{key}' not found in bucket '{bucket}'")
+        logger.warning(f"Key '{key}' not found in bucket '{bucket}'")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Object not found"
         )
@@ -112,7 +113,7 @@ async def download_object(
     file_path = os.path.join(OBJECTS_DIR, prefix, object_hash)
 
     if not os.path.exists(file_path):
-        print(f"Failed : Object '{key}' not found in bucket '{bucket}'")
+        logger.warning(f"Object '{key}' not found in bucket '{bucket}'")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Object not found"
         )
@@ -128,7 +129,7 @@ async def download_object(
     }
 
     if range_header:
-        print(f"Range request detected: {range_header}")
+        logger.debug(f"Range request detected: {range_header}")
 
         try:
             byte_range = range_header.replace("bytes=", "").split("-")
@@ -176,7 +177,7 @@ async def download_object(
 
                 yield chunk
 
-    print(f"Starting {chunk_size} bytes (Status: {status_code})'")
+    logger.debug(f"Starting {chunk_size} bytes (Status: {status_code})'")
 
     return StreamingResponse(
         file_iterator(file_path, start, chunk_size),
@@ -187,7 +188,7 @@ async def download_object(
 
 @router.get("/{bucket}/objects", response_model=list[ObjectResponse])
 async def list_objects(bucket: str, db: AsyncSession = Depends(get_db)):
-    print(f"Listing objects in bucket: {bucket}")
+    logger.info(f"Listing objects in bucket: {bucket}")
 
     bucket_check = await db.execute(select(Bucket).where(Bucket.name == bucket))
     if not bucket_check.scalar_one_or_none():
@@ -211,7 +212,7 @@ async def list_objects(bucket: str, db: AsyncSession = Depends(get_db)):
 
 @router.delete("/{bucket}/{key:path}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_object(bucket: str, key: str, db: AsyncSession = Depends(get_db)):
-    print(f"Attempting to delete object '{key}' from bucket '{bucket}'")
+    logger.info(f"Attempting to delete object '{key}' from bucket '{bucket}'")
 
     statement = select(Key).where(Key.bucket == bucket, Key.key == key)
     result = await db.execute(statement)
@@ -232,7 +233,7 @@ async def delete_object(bucket: str, key: str, db: AsyncSession = Depends(get_db
     remaining_reference = ref_result.scalar_one_or_none()
 
     if not remaining_reference:
-        print(f"No more references to object with hash '{target_hash}'. Deleting file.")
+        logger.info(f"No more references to object with hash '{target_hash}'. Deleting file.")
 
         obj_statement = select(Object).where(Object.hash == target_hash)
         obj_result = await db.execute(obj_statement)
@@ -246,20 +247,20 @@ async def delete_object(bucket: str, key: str, db: AsyncSession = Depends(get_db
 
         if os.path.exists(file_path):
             os.remove(file_path)
-            print(f"File '{file_path}' deleted successfully.")
+            logger.info(f"File '{file_path}' deleted successfully.")
 
             prefix_dir = os.path.dirname(file_path)
             if not os.listdir(prefix_dir):
                 os.rmdir(prefix_dir)
-                print(f"Prefix directory '{prefix_dir}' removed as it is now empty.")
+                logger.info(f"Prefix directory '{prefix_dir}' removed as it is now empty.")
         else:
-            print(f"File '{file_path}' not found.")
+            logger.warning(f"File '{file_path}' not found.")
 
     else:
-        print(
+        logger.info(
             f"Object with hash '{target_hash}' still has references. Skipping file deletion."
         )
 
     await db.commit()
-    print(f"Object '{key}' deleted successfully from bucket '{bucket}'")
+    logger.info(f"Object '{key}' deleted successfully from bucket '{bucket}'")
     return None

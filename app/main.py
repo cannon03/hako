@@ -5,8 +5,10 @@ from fastapi import FastAPI
 
 from app.const import OBJECTS_DIR, TMP_DIR
 from app.database import engine, get_db, Base
+from app.logging_config import setup_logging
 from app.routers import buckets, objects
 from app import models
+from loguru import logger
 
 
 def ensure_directories():
@@ -17,16 +19,18 @@ def ensure_directories():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
 
-    print("Initializing storage directories...")
+    setup_logging()
+
+    logger.info("Initializing storage directories...")
     ensure_directories()
 
-    print("Initializing database tables...")
+    logger.info("Initializing database tables...")
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
     yield
 
-    print("Shutting down Hako...")
+    logger.info("Shutting down Hako...")
     await engine.dispose()
 
 
