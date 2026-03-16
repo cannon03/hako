@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  hako-api:
+    build: .
+    container_name: hako-storage-node
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data  # Persists your DB and CAS objects to your local machine
+    restart: unless-stopped
